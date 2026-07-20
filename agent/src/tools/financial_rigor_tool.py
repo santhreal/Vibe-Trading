@@ -362,6 +362,9 @@ def exact_calc(expr: str) -> dict[str, Any]:
     return {"expr": expr, "result": float(d), "result_exact": str(d)}
 
 
+_MAX_SCENARIO_YEARS = 100
+
+
 def three_scenario_valuation(
     current_price: Any,
     current_eps: Any,
@@ -387,13 +390,21 @@ def three_scenario_valuation(
         growth_optimistic / growth_neutral / growth_pessimistic: Annual EPS
             growth rate per scenario (e.g. ``0.15`` for 15%).
         pe_optimistic / pe_neutral / pe_pessimistic: Target PE per scenario.
-        years: Forecast horizon in years.
+        years: Forecast horizon in years (1..100).
         currency: Optional currency label.
 
     Returns:
         Dict with the assumptions and a ``scenarios`` list, each carrying its
         ``future_eps``, ``target_price`` and ``upside_pct``.
+
+    Raises:
+        ValueError: When ``years`` is outside 1..100.
     """
+    years_i = int(years)
+    if years_i < 1 or years_i > _MAX_SCENARIO_YEARS:
+        raise ValueError(
+            f"years must be between 1 and {_MAX_SCENARIO_YEARS}, got {years_i}"
+        )
     p, eps, shares = _exact(current_price), _exact(current_eps), _exact(shares_billion)
     spec = [
         ("bull", growth_optimistic, pe_optimistic),
@@ -410,7 +421,7 @@ def three_scenario_valuation(
             g = _CTX.divide(g, Decimal("100"))
             normalized.append(name)
         future_eps = eps
-        for _ in range(int(years)):
+        for _ in range(years_i):
             future_eps = _CTX.multiply(future_eps, _CTX.add(Decimal("1"), g))
         target_price = _CTX.multiply(future_eps, target_pe)
         upside = float(target_price - p) / float(p) * 100 if p != 0 else 0.0
@@ -426,7 +437,7 @@ def three_scenario_valuation(
         "current_price": float(p),
         "current_eps": float(eps),
         "shares_billion": float(shares),
-        "years": int(years),
+        "years": years_i,
         "currency": currency,
         "scenarios": scenarios,
     }
@@ -507,7 +518,11 @@ class FinancialRigorTool(BaseTool):
                 "minItems": 3, "maxItems": 3,
                 "description": "three_scenario: target PE [bull, base, bear].",
             },
-            "years": {"type": "integer", "default": 3, "description": "three_scenario horizon."},
+            "years": {
+                "type": "integer",
+                "default": 3,
+                "description": "three_scenario horizon in years (1..100).",
+            },
         },
         "required": ["command"],
     }
