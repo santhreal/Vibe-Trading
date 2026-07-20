@@ -20,6 +20,8 @@ def compute_rsi(close: pd.Series, period: int = 14) -> pd.Series:
     Returns:
         RSI 值序列，范围 0-100。
     """
+    if period < 1:
+        raise ValueError(f"period must be >= 1, got {period}")
     delta = close.diff()
     gain = delta.clip(lower=0)
     loss = (-delta).clip(lower=0)
