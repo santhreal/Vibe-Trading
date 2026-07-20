@@ -188,8 +188,7 @@ def _write_env_values(path: Path, updates: Dict[str, str]) -> None:
     seen: set[str] = set()
     for index, raw in enumerate(lines):
         stripped = raw.lstrip()
-        # Skip commented lines so a `# KEY=...` example cannot steal the upsert
-        # from a later active `KEY=` (last-wins on read would discard the write).
+        # Active keys only; a leading `# KEY=` must not steal the upsert.
         if stripped.startswith("#"):
             continue
         if "=" not in stripped:
