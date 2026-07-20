@@ -45,6 +45,8 @@ def compute_adx(
     Returns:
         包含 plus_di、minus_di、adx 列的 DataFrame。
     """
+    if period < 1:
+        raise ValueError(f"period must be >= 1, got {period}")
     prev_high = high.shift(1)
     prev_low = low.shift(1)
     prev_close = close.shift(1)
