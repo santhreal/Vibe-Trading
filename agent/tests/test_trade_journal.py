@@ -21,6 +21,8 @@ from src.tools.trade_journal_parsers import (
     _qualify_a_share,
     parse_tonghuashun,
     parse_eastmoney,
+    parse_futu,
+    parse_generic,
     detect_format,
     parse_file,
     records_to_dataframe,
@@ -578,3 +580,66 @@ def test_parse_eastmoney_skips_nan_code_rows() -> None:
     rec = parse_eastmoney(df)
     assert len(rec) == 1
     assert rec[0].symbol == "000001.SZ"
+
+
+def test_parse_generic_skips_nan_symbol_rows() -> None:
+    """Blank CSV symbol cells become pandas NaN; must not invent ticker NAN."""
+    df = pd.DataFrame([{
+        "symbol": float("nan"), "side": "buy", "price": 100.0,
+        "quantity": 10.0, "datetime": "2024-01-02 10:00:00",
+    }, {
+        "symbol": "AAPL", "side": "sell", "price": 101.0,
+        "quantity": 5.0, "datetime": "2024-01-03 10:00:00",
+    }])
+    rec = parse_generic(df)
+    assert len(rec) == 1
+    assert rec[0].symbol == "AAPL"
+    assert rec[0].side == "sell"
+    assert rec[0].quantity == 5.0
+    assert rec[0].price == 101.0
+
+
+def test_parse_generic_skips_blank_symbol_rows() -> None:
+    df = pd.DataFrame([{
+        "symbol": "", "side": "buy", "price": 100.0,
+        "quantity": 10.0, "datetime": "2024-01-02 10:00:00",
+    }, {
+        "symbol": "MSFT", "side": "buy", "price": 400.0,
+        "quantity": 2.0, "datetime": "2024-01-03 10:00:00",
+    }])
+    rec = parse_generic(df)
+    assert len(rec) == 1
+    assert rec[0].symbol == "MSFT"
+
+
+def test_parse_futu_skips_nan_symbol_rows() -> None:
+    df = pd.DataFrame([{
+        "Date": "2024-01-02", "Time": "10:00:00", "Symbol": float("nan"),
+        "Name": "", "Side": "Buy", "Quantity": 10, "Price": 100.0,
+        "Amount": 1000, "Commission": 0, "Platform Fee": 0, "Market": "US",
+    }, {
+        "Date": "2024-01-03", "Time": "10:00:00", "Symbol": "AAPL",
+        "Name": "Apple", "Side": "Sell", "Quantity": 5, "Price": 101.0,
+        "Amount": 505, "Commission": 0, "Platform Fee": 0, "Market": "US",
+    }])
+    rec = parse_futu(df)
+    assert len(rec) == 1
+    assert rec[0].symbol == "AAPL"
+    assert rec[0].side == "sell"
+    assert rec[0].quantity == 5.0
+
+
+def test_parse_file_generic_csv_skips_empty_symbol_cell(tmp_path: Path) -> None:
+    """End-to-end: broker CSV with a blank symbol cell must not emit ticker NAN."""
+    path = tmp_path / "journal.csv"
+    path.write_text(
+        "symbol,side,price,quantity,datetime\n"
+        ",buy,100,10,2024-01-02 10:00:00\n"
+        "AAPL,sell,101,5,2024-01-03 10:00:00\n",
+        encoding="utf-8",
+    )
+    fmt, rec = parse_file(path)
+    assert fmt == "generic"
+    assert len(rec) == 1
+    assert rec[0].symbol == "AAPL"
+    assert all(r.symbol != "NAN" for r in rec)

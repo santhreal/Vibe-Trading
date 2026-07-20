@@ -284,10 +284,13 @@ def parse_futu(df: pd.DataFrame) -> list[TradeRecord]:
     """
     records: list[TradeRecord] = []
     for _, row in df.iterrows():
+        raw_symbol = row.get("Symbol", "")
+        if _is_empty_code(raw_symbol):
+            continue
         date = str(row.get("Date", "")).strip()
         time = str(row.get("Time", "")).strip()
         dt = f"{date} {time}".strip()
-        symbol = str(row.get("Symbol", "")).strip().upper()
+        symbol = str(raw_symbol).strip().upper()
         qty = _to_float(row.get("Quantity"))
         price = _to_float(row.get("Price"))
         amount = _to_float(row.get("Amount")) or qty * price
@@ -341,13 +344,16 @@ def parse_generic(df: pd.DataFrame) -> list[TradeRecord]:
 
     records: list[TradeRecord] = []
     for _, row in df.iterrows():
+        raw_symbol = row.get(sym_col, "") if sym_col else ""
+        if _is_empty_code(raw_symbol):
+            continue
         if dt_col:
             dt = str(row.get(dt_col, "")).strip()
         elif date_col:
             dt = str(row.get(date_col, "")).strip()
         else:
             dt = ""
-        symbol = str(row.get(sym_col, "")).strip() if sym_col else ""
+        symbol = str(raw_symbol).strip()
         qty = _to_float(row.get(qty_col)) if qty_col else 0.0
         price = _to_float(row.get(price_col)) if price_col else 0.0
         amount = _to_float(row.get(amount_col)) if amount_col else qty * price
