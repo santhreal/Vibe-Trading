@@ -129,9 +129,11 @@ def _rolling_correlation_matrix(
 
     for code in codes:
         ts = closes[code]
-        # Normalize to date-only (midnight) so that cross-market assets
-        # (e.g. crypto via OKX/CCXT at UTC midnight vs US equity via
-        # yfinance at EDT midnight = 04:00 UTC) align correctly.
+        # Drop timezone before calendar-day normalize so cross-market series
+        # (tz-aware crypto/HK vs tz-naive US loaders) align instead of raising
+        # TypeError on concat, matching the loader UTC-naive contract.
+        if isinstance(ts.index, pd.DatetimeIndex) and ts.index.tz is not None:
+            ts.index = ts.index.tz_convert("UTC").tz_localize(None)
         ts.index = ts.index.normalize()
         rets = ts.pct_change().dropna()
         rets.name = code

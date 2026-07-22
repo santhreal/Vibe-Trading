@@ -256,3 +256,32 @@ def test_rolling_correlation_unnamed_datetime_index() -> None:
     labels, matrix = _rolling_correlation_matrix(series, window=20, method="pearson")
     assert labels == ["A", "B"]
     assert len(matrix) == 2
+
+
+def test_rolling_correlation_tz_aware_and_naive_align() -> None:
+    """Tz-aware + tz-naive daily closes must align on calendar dates, not TypeError."""
+    closes = np.linspace(100, 130, 30)
+    idx_naive = pd.date_range("2020-01-01", periods=30, freq="D")
+    idx_aware = pd.date_range("2020-01-01", periods=30, freq="D", tz="UTC")
+    series = {
+        "US": pd.DataFrame({"close": closes}, index=idx_naive),
+        "CRYPTO": pd.DataFrame({"close": closes * 1.01}, index=idx_aware),
+    }
+    labels, matrix = _rolling_correlation_matrix(series, window=20, method="pearson")
+    assert labels == ["CRYPTO", "US"]
+    assert -1.0 <= matrix[0][1] <= 1.0
+    assert matrix[0][1] == pytest.approx(matrix[1][0])
+
+
+def test_rolling_correlation_cross_timezone_calendar_align() -> None:
+    """Different timezones normalize to the same UTC calendar day before corr."""
+    closes = np.linspace(50, 80, 30)
+    idx_utc = pd.date_range("2020-01-01", periods=30, freq="D", tz="UTC")
+    idx_ny = pd.date_range("2020-01-01", periods=30, freq="D", tz="America/New_York")
+    series = {
+        "A": pd.DataFrame({"close": closes}, index=idx_utc),
+        "B": pd.DataFrame({"close": closes.copy()}, index=idx_ny),
+    }
+    labels, matrix = _rolling_correlation_matrix(series, window=20, method="pearson")
+    assert labels == ["A", "B"]
+    assert matrix[0][1] == pytest.approx(1.0, abs=1e-3)
