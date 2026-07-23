@@ -244,7 +244,10 @@ class DataLoader:
         Returns:
             Mapping code -> DataFrame.
         """
-        freq_map = {"1m": "1min", "5m": "5min", "15m": "15min", "30m": "30min", "1H": "60min"}
+        freq_map = {
+            "1m": "1min", "5m": "5min", "15m": "15min", "30m": "30min",
+            "1H": "60min", "1h": "60min",
+        }
         freq = freq_map.get(interval)
         if not freq:
             logger.error("unsupported Tushare interval: %s", interval)
