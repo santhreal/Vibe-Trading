@@ -29,6 +29,7 @@ _INTRADAY_FREQ: dict[str, int] = {
     "15m": 1,
     "30m": 2,
     "1H": 3,
+    "1h": 3,
 }
 _DAILY_FREQ: dict[str, int] = {
     "1D": 4,
