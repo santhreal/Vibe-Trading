@@ -49,6 +49,7 @@ KLT_BY_INTERVAL: dict[str, int] = {
     "15m": 15,
     "30m": 30,
     "1H": 60,
+    "1h": 60,
     "60m": 60,
 }
 
