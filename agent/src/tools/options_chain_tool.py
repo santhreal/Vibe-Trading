@@ -10,6 +10,7 @@ reuses one session, so the agent never hits Yahoo un-spaced.
 from __future__ import annotations
 
 import json
+import math
 from typing import Any, Dict, List, Optional
 
 from backtest.loaders import yahoo_client
@@ -133,7 +134,19 @@ def _success(ticker: str, result: Dict[str, Any]) -> str:
     return json.dumps(
         {"ok": True, "market": "us", "source": "yahoo", "data": data},
         ensure_ascii=False,
+        allow_nan=False,
     )
+
+
+def _json_number(value: Any) -> Any:
+    """Pass through values; replace non-finite floats with None for JSON."""
+    if isinstance(value, bool) or value is None or isinstance(value, str):
+        return value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, int):
+        return value
+    return value
 
 
 def _contracts(raw: Any) -> List[Dict[str, Any]]:
@@ -145,7 +158,10 @@ def _contracts(raw: Any) -> List[Dict[str, Any]]:
         if not isinstance(entry, dict):
             continue
         rows.append(
-            {our_key: entry.get(yahoo_key) for yahoo_key, our_key in _CONTRACT_FIELDS}
+            {
+                our_key: _json_number(entry.get(yahoo_key))
+                for yahoo_key, our_key in _CONTRACT_FIELDS
+            }
         )
     return rows
 

@@ -142,3 +142,22 @@ class TestOptionsChainErrors:
         assert payload["ok"] is False
         assert "yahoo options request failed" in payload["error"]
         assert "429" in payload["error"]
+
+
+class TestOptionsChainNonFinite:
+    """Yahoo often leaves bid/ask/IV as NaN on illiquid strikes."""
+
+    def test_nan_contract_fields_become_null_not_bare_nan(self):
+        sample = _sample_result()
+        sample["options"][0]["calls"][0]["bid"] = float("nan")
+        sample["options"][0]["calls"][0]["impliedVolatility"] = float("nan")
+        with patch.object(oc.yahoo_client, "get_options", return_value=sample):
+            out = oc.OptionsChainTool().execute(ticker="AAPL")
+        assert "NaN" not in out
+        payload = json.loads(out)
+        call = payload["data"]["calls"][0]
+        assert call["bid"] is None
+        assert call["implied_volatility"] is None
+        assert call["strike"] == 190.0
+        # Strict JSON consumers reject bare NaN; allow_nan=False must succeed.
+        json.dumps(payload, allow_nan=False)
