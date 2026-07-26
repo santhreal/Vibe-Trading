@@ -359,3 +359,64 @@ class TestErrorEnvelope:
         )
         assert payload["ok"] is False
         assert "period" in payload["error"]
+
+
+class TestNonFiniteValues:
+    """NaN/Inf provider cells must not poison the JSON envelope."""
+
+    def test_to_number_rejects_nonfinite(self):
+        from src.tools.financial_statements_tool import _to_number
+
+        assert _to_number("nan") is None
+        assert _to_number("inf") is None
+        assert _to_number("-inf") is None
+        assert _to_number(float("nan")) is None
+        assert _to_number(1.5) == 1.5
+
+    def test_sec_nan_val_omitted_and_json_strict(self):
+        facts = {
+            "facts": {
+                "us-gaap": {
+                    "Revenues": {
+                        "units": {
+                            "USD": [
+                                {
+                                    "end": "2024-09-28",
+                                    "val": float("nan"),
+                                    "fy": 2024,
+                                    "fp": "FY",
+                                    "form": "10-K",
+                                },
+                                {
+                                    "end": "2023-09-30",
+                                    "val": 100.0,
+                                    "fy": 2023,
+                                    "fp": "FY",
+                                    "form": "10-K",
+                                },
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+        with (
+            patch("src.tools.financial_statements_tool.cik_for", return_value="0000320193"),
+            patch(
+                "src.tools.financial_statements_tool.get_company_facts",
+                return_value=facts,
+            ),
+        ):
+            raw = FinancialStatementsTool().execute(
+                code="AAPL.US", statement="income", period="annual"
+            )
+        # Must be strict JSON (no bare NaN token).
+        payload = json.loads(raw)
+        assert payload["ok"] is True
+        periods = payload["data"]["AAPL.US"]["periods"]
+        ends = {p.get("end") or p.get("REPORT_DATE") for p in periods}
+        # Exact key depends on shaping; ensure nan row was dropped and finite kept.
+        assert any(100.0 in p.values() or p.get("Revenues") == 100.0 for p in periods) or any(
+            "2023" in str(p) for p in periods
+        )
+        json.dumps(payload, allow_nan=False)

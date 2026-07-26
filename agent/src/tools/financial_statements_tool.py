@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from typing import Any
 
 from backtest.loaders.eastmoney_client import get_json, resolve_secid
@@ -289,9 +290,14 @@ def _to_number(value: Any) -> float | None:
     if value in (None, "", "-"):
         return None
     try:
-        return float(value)
+        out = float(value)
     except (TypeError, ValueError):
         return None
+    # SEC/Eastmoney occasionally emit NaN/Inf; those are not JSON-safe and
+    # must not land in the tool envelope (allow_nan=False contract).
+    if not math.isfinite(out):
+        return None
+    return out
 
 
 def _pick_sec_unit(units: dict[str, Any]) -> tuple[str, list[Any]]:
@@ -503,4 +509,4 @@ class FinancialStatementsTool(BaseTool):
         }
         if all_failed:
             envelope["error"] = result["error"]
-        return json.dumps(envelope, ensure_ascii=False)
+        return json.dumps(envelope, ensure_ascii=False, allow_nan=False)
