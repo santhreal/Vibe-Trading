@@ -60,6 +60,15 @@ def test_non_finite_final_equity_is_json_safe(terminal: float) -> None:
     json.dumps(metrics, allow_nan=False)
 
 
+def test_calc_options_metrics_handles_null_pnl_trade() -> None:
+    metrics = _calc_options_metrics(
+        pd.Series([100.0, 105.0]), 100.0, [{"pnl": None}, {"pnl": 5.0}]
+    )
+    assert metrics["trade_count"] == 2
+    assert metrics["win_rate"] == 1.0
+    json.dumps(metrics, allow_nan=False)
+
+
 def test_normal_positive_equity_metrics_remain_finite() -> None:
     metrics = _calc_options_metrics(
         pd.Series([100.0, 110.0, 104.5, 115.0, 103.5, 120.0]),

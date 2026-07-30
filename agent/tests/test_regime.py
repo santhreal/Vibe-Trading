@@ -68,6 +68,13 @@ class TestComputeEdgeDensity:
         observed = density.dropna()
         assert ((observed >= 0.0) & (observed <= 1.0)).all()
 
+    def test_single_asset_returns_returns_zero_density(self):
+        dates = pd.date_range("2024-01-01", periods=100, freq="D")
+        returns = pd.DataFrame({"AAPL": np.random.randn(100)}, index=dates)
+        density = compute_edge_density(returns, corr_window=60)
+        assert len(density) == 100
+        assert density.isna().all()
+
 
 class TestDetectRegimes:
     def _series(self, values: list[float]) -> pd.Series:

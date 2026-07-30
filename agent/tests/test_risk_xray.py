@@ -57,6 +57,17 @@ def test_empty_panel_rejected():
         compute_risk_xray(pd.DataFrame(), {"AAA": 1.0})
 
 
+
+def test_surviving_weights_sum_to_zero_raises_valueerror():
+    dates = pd.date_range("2026-01-01", periods=40)
+    msft_closes = [100.0] * 5 + [np.nan] * 35
+    closes = pd.DataFrame(
+        {"AAPL": np.random.randn(40).cumsum() + 100, "MSFT": msft_closes},
+        index=dates,
+    )
+    with pytest.raises(ValueError, match="surviving"):
+        compute_risk_xray(closes, {"AAPL": 0.0, "MSFT": 1.0}, min_history=30)
+
 # ---------------------------------------------------------------------------
 # concentration
 # ---------------------------------------------------------------------------
