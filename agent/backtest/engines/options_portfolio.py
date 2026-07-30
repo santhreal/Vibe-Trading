@@ -735,7 +735,7 @@ def _calc_options_metrics(
     closed_pnl = [
         float(t["pnl"])
         for t in trades
-        if t.get("pnl", 0) != 0 and np.isfinite(float(t["pnl"]))
+        if t.get("pnl") is not None and float(t.get("pnl", 0)) != 0 and np.isfinite(float(t["pnl"]))
     ]
     wins = [p for p in closed_pnl if p > 0]
     losses = [p for p in closed_pnl if p < 0]
