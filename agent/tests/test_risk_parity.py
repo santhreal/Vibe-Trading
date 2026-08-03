@@ -86,6 +86,15 @@ class TestRiskParityCalcWeights:
         w = opt._calc_weights({"cov": cov})
         assert len(w) == 0
 
+    def test_negative_diagonal_cov_fallback(self, recwarn: pytest.WarningsRecorder) -> None:
+        """Covariance matrix with negative diagonal element (from numerical noise) returns equal weights without RuntimeWarning."""
+        cov = np.array([[-1e-15, 0.0], [0.0, 0.04]])
+        opt = RiskParityOptimizer()
+        w = opt._calc_weights({"cov": cov})
+        np.testing.assert_allclose(w, [0.5, 0.5])
+        runtime_warnings = [w for w in recwarn.list if issubclass(w.category, RuntimeWarning)]
+        assert len(runtime_warnings) == 0, f"Expected no RuntimeWarning, but got: {runtime_warnings}"
+
 
 class TestRiskParityOptimize:
     """Integration test for the module-level optimize function."""

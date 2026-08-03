@@ -20,9 +20,10 @@ class RiskParityOptimizer(BaseOptimizer):
         if n == 0:
             return self._equal_weight(0)
 
-        vols = np.sqrt(np.diag(cov))
-        if not np.isfinite(cov).all() or np.any(vols < 1e-12):
+        diag = np.diag(cov)
+        if not np.isfinite(cov).all() or not np.isfinite(diag).all() or np.any(diag < 1e-12):
             return self._equal_weight(n)
+        vols = np.sqrt(diag)
 
         inv_vol = 1.0 / vols
         seed = inv_vol / inv_vol.sum()
