@@ -40,6 +40,10 @@ def compute_edge_density(
     Returns:
         Edge-density series aligned to ``returns.index`` (NaN during warmup)
     """
+    if corr_window < 2:
+        raise ValueError("corr_window must be at least 2")
+    if not (0.0 <= edge_threshold <= 1.0):
+        raise ValueError("edge_threshold must be between 0.0 and 1.0")
     n_assets = returns.shape[1]
     n_pairs = n_assets * (n_assets - 1) // 2
     if n_pairs == 0:
@@ -74,8 +78,10 @@ def detect_regimes(
     Returns:
         DataFrame with columns ``density``, ``smoothed``, ``fused`` (0/1)
     """
-    if exit_threshold >= enter_threshold:
-        raise ValueError("exit_threshold must be below enter_threshold")
+    if smooth_window < 1:
+        raise ValueError("smooth_window must be at least 1")
+    if not (0.0 <= exit_threshold < enter_threshold <= 1.0):
+        raise ValueError("Thresholds must be between 0.0 and 1.0 with exit_threshold < enter_threshold")
 
     # Trailing mean = causal. A centered window here silently reads the future.
     smoothed = density.rolling(smooth_window, min_periods=1).mean()

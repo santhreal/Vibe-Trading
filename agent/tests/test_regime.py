@@ -73,6 +73,22 @@ class TestComputeEdgeDensity:
         density = compute_edge_density(returns, corr_window=60)
         assert density.isna().all()
 
+    def test_invalid_corr_window_raises(self):
+        rng = np.random.default_rng(13)
+        returns = _returns_panel([_calm_block(rng, 50, 3)])
+        with pytest.raises(ValueError, match="corr_window"):
+            compute_edge_density(returns, corr_window=1)
+        with pytest.raises(ValueError, match="corr_window"):
+            compute_edge_density(returns, corr_window=0)
+
+    def test_invalid_edge_threshold_raises(self):
+        rng = np.random.default_rng(17)
+        returns = _returns_panel([_calm_block(rng, 50, 3)])
+        with pytest.raises(ValueError, match="edge_threshold"):
+            compute_edge_density(returns, edge_threshold=-0.1)
+        with pytest.raises(ValueError, match="edge_threshold"):
+            compute_edge_density(returns, edge_threshold=1.5)
+
 
 class TestDetectRegimes:
     def _series(self, values: list[float]) -> pd.Series:
@@ -83,6 +99,16 @@ class TestDetectRegimes:
         with pytest.raises(ValueError, match="exit_threshold"):
             detect_regimes(self._series([0.1]), enter_threshold=0.5, exit_threshold=0.5)
 
+
+    def test_invalid_smooth_window_raises(self):
+        with pytest.raises(ValueError, match="smooth_window"):
+            detect_regimes(self._series([0.1]), smooth_window=0)
+
+    def test_invalid_threshold_bounds_raises(self):
+        with pytest.raises(ValueError, match="threshold"):
+            detect_regimes(self._series([0.1]), enter_threshold=1.5, exit_threshold=0.5)
+        with pytest.raises(ValueError, match="threshold"):
+            detect_regimes(self._series([0.1]), enter_threshold=0.8, exit_threshold=-0.2)
     def test_enters_and_exits_across_thresholds(self):
         density = self._series([0.1] * 10 + [0.9] * 10 + [0.1] * 10)
         result = detect_regimes(density, smooth_window=1)
