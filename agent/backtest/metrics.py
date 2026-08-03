@@ -515,8 +515,15 @@ def calc_metrics(
     # Sortino
     if returns_finite:
         downside = port_ret[port_ret < 0]
-        downside_std = float(downside.std()) if len(downside) > 1 else 1e-10
-        sortino = float(port_ret.mean() / (downside_std + 1e-10) * np.sqrt(bpy))
+        if len(downside) == 0:
+            downside_std = 1e-10
+        else:
+            downside_std = float(downside.std()) if len(downside) > 1 else 0.0
+        sortino = (
+            float(port_ret.mean() / (downside_std + 1e-10) * np.sqrt(bpy))
+            if (len(downside) == 0 or downside_std > 1e-12)
+            else 0.0
+        )
     else:
         sortino = 0.0
     if not np.isfinite(sortino):

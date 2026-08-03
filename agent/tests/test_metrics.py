@@ -413,6 +413,14 @@ class TestCalcMetrics:
         m = calc_metrics(eq, [], 1_000_000, 252)
         assert m["sortino"] > 0
 
+    def test_sortino_zero_downside_std_returns_zero(self) -> None:
+        """Zero variance in downside returns must not explode Sortino ratio via 1e-10 epsilon division."""
+        dates = pd.bdate_range("2025-01-01", periods=6)
+        # Equity curve with two identical -1% dips
+        eq = pd.Series([100.0, 102.0, 104.04, 102.9996, 105.0596, 104.009004], index=dates)
+        m = calc_metrics(eq, [], 100.0, 252)
+        assert m["sortino"] == 0.0
+
     def test_calmar_positive_for_drawdown(self) -> None:
         """Growing equity with a dip should have positive Calmar."""
         dates = pd.bdate_range("2025-01-01", periods=100)
