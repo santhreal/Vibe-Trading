@@ -180,6 +180,19 @@ class TestRollingCorrelationMatrix:
         assert -1 <= matrix_window[0][1] <= 1
         assert -1 <= matrix_full[0][1] <= 1
 
+    def test_invalid_window_raises(self):
+        closes = [100.0 + i for i in range(50)]
+        price_series = {
+            "A": self._make_price_df(closes),
+            "B": self._make_price_df(closes),
+        }
+        with pytest.raises(ValueError, match="Lookback window"):
+            _rolling_correlation_matrix(price_series, window=-10, method="pearson")
+        with pytest.raises(ValueError, match="Lookback window"):
+            _rolling_correlation_matrix(price_series, window=0, method="pearson")
+        with pytest.raises(ValueError, match="Lookback window"):
+            _rolling_correlation_matrix(price_series, window=1, method="pearson")
+
     def test_same_asset_correlation_is_one(self):
         price_series = {
             "A": self._make_price_df([100, 105, 110, 108, 112]),

@@ -127,6 +127,8 @@ def _rolling_correlation_matrix(
         (labels, matrix) where labels is the sorted list of codes and matrix
         is a symmetric NxN matrix of correlation coefficients.
     """
+    if window < 2:
+        raise ValueError("Lookback window must be at least 2 days")
     if not price_series:
         return [], []
 
@@ -276,6 +278,8 @@ def compute_correlation_matrix(
     Returns:
         Dict with keys: labels, matrix, window, method.
     """
+    if days < 2:
+        raise ValueError("Lookback window (days) must be at least 2")
     from datetime import datetime, timedelta
 
     end_date = datetime.now().strftime("%Y-%m-%d")
