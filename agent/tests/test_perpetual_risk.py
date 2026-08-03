@@ -81,6 +81,11 @@ def test_bracket_accepts_optional_notional_coefficient() -> None:
     assert bracket.notional_coefficient == 1.5
 
 
+@pytest.mark.parametrize("coeff", [0.0, -1.5, -0.001])
+def test_bracket_rejects_non_positive_notional_coefficient(coeff: float) -> None:
+    with pytest.raises(ValueError, match="notional_coefficient must be positive and finite"):
+        MaintenanceBracket(1, 50_000.0, 0.004, 0.0, notional_coefficient=coeff)
+
 def test_schedule_requires_strictly_increasing_notional_caps() -> None:
     with pytest.raises(ValueError, match="notional caps"):
         MaintenanceSchedule(

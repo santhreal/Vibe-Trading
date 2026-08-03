@@ -67,7 +67,7 @@ class MaintenanceBracket:
         if self.cumulative_maintenance_amount < 0:
             raise ValueError("cumulative_maintenance_amount must be non-negative")
         if self.notional_coefficient is not None:
-            _require_finite("notional_coefficient", self.notional_coefficient)
+            _require_finite("notional_coefficient", self.notional_coefficient, positive=True)
 
 
 @dataclass(frozen=True)
