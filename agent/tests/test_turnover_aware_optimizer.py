@@ -143,6 +143,15 @@ class TestTurnoverAwareOptimize:
         result = optimize(ret, pos, dates, lookback=60)
         pd.testing.assert_frame_equal(result, pos)
 
+    def test_infeasible_caps_during_optimize_does_not_crash(self) -> None:
+        """When exposure caps are infeasible for active assets on a date, optimize should skip update instead of crashing."""
+        dates = pd.bdate_range("2025-01-01", periods=70)
+        ret = pd.DataFrame(np.random.default_rng(1).normal(0.001, 0.02, (70, 2)), index=dates, columns=["A", "B"])
+        pos = pd.DataFrame(1.0, index=dates, columns=["A", "B"])
+        opt = TurnoverAwareOptimizer(lookback=60, max_per_name=0.4)
+        result = opt.optimize(ret, pos, dates)
+        assert result.shape == pos.shape
+
 
 # ---------------------------------------------------------------------------
 # Exposure caps
@@ -252,17 +261,18 @@ class TestExposureCaps:
             )
 
     def test_infeasible_per_name_cap_fails_closed(self) -> None:
-        with pytest.raises(ValueError, match="infeasible"):
-            TurnoverAwareOptimizer(max_per_name=0.19)._calc_weights(self._ctx())
+        assert TurnoverAwareOptimizer(max_per_name=0.19)._calc_weights(self._ctx()) is None
 
     def test_infeasible_active_group_cap_fails_closed(self) -> None:
         ctx = self._ctx(n_assets=2)
         groups = {"A0": "tech", "A1": "tech", "NOT_ACTIVE": "other"}
-        with pytest.raises(ValueError, match="infeasible"):
+        assert (
             TurnoverAwareOptimizer(
                 groups=groups,
                 max_per_group={"tech": 0.5, "other": 0.5},
             )._calc_weights(ctx)
+            is None
+        )
 
     def test_solver_failure_does_not_return_equal_weight(self, monkeypatch) -> None:
         from scipy import optimize as scipy_optimize
@@ -274,8 +284,7 @@ class TestExposureCaps:
                 "FailedResult", (), {"success": False, "message": "forced failure"}
             )(),
         )
-        with pytest.raises(RuntimeError, match="forced failure"):
-            TurnoverAwareOptimizer(max_per_name=0.3)._calc_weights(self._ctx())
+        assert TurnoverAwareOptimizer(max_per_name=0.3)._calc_weights(self._ctx()) is None
 
     def test_no_caps_unchanged(self) -> None:
         ctx = self._ctx()

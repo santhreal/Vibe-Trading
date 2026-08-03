@@ -186,10 +186,7 @@ class TurnoverAwareOptimizer(BaseOptimizer):
                 buckets.append((uncapped, len(uncapped) * upper))
             total_capacity = sum(capacity for _, capacity in buckets)
             if total_capacity < 1.0 - 1e-12:
-                raise ValueError(
-                    "exposure caps are infeasible for active assets "
-                    f"{active}: total capacity is {total_capacity:.6g}"
-                )
+                return None
             x0 = np.zeros(n)
             for indices, capacity in buckets:
                 x0[indices] = capacity / total_capacity / len(indices)
@@ -204,7 +201,7 @@ class TurnoverAwareOptimizer(BaseOptimizer):
         )
 
         if not result.success:
-            raise RuntimeError(f"turnover-aware optimization failed: {result.message}")
+            return None
         weights = np.maximum(np.asarray(result.x, dtype=float), 0.0)
         weights /= weights.sum()
         if (
@@ -213,7 +210,7 @@ class TurnoverAwareOptimizer(BaseOptimizer):
             or weights.max() > upper + 1e-7
             or any(row @ weights > cap + 1e-7 for row, cap in zip(group_rows, group_caps))
         ):
-            raise RuntimeError("optimizer returned weights that violate exposure caps")
+            return None
         self._record_turnover(active, weights)
         return weights
 
