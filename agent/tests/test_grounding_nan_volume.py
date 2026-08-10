@@ -107,3 +107,19 @@ def test_format_with_empty_grounding() -> None:
 def test_format_with_empty_rows() -> None:
     result = format_grounding_block({"AAPL.US": []})
     assert result == ""
+
+
+def test_latest_close_date_matches_finite_close_row() -> None:
+    """When the final bar has NaN close, the 'Latest close' date must match
+    the last row with a finite close, not the final bar's date."""
+    grounding = {
+        "AAPL.US": [
+            {"trade_date": "2026-08-05", "close": 195.0, "volume": 1000000},
+            {"trade_date": "2026-08-06", "close": 200.0, "volume": 1100000},
+            {"trade_date": "2026-08-07", "close": float("nan"), "volume": 0},
+        ]
+    }
+    result = format_grounding_block(grounding)
+    # Latest close should be 200.00 with date 2026-08-06, not 2026-08-07
+    assert "200.00 (2026-08-06)" in result
+    assert "200.00 (2026-08-07)" not in result

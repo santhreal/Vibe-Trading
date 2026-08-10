@@ -248,6 +248,13 @@ def format_grounding_block(grounding: dict[str, list[dict]]) -> str:
         window_low = min(closes)
         window_high = max(closes)
         last_close = closes[-1]
+        # Find the last row with a finite close so the "Latest close" label
+        # pairs the price with its correct date, not the final bar's date
+        # (which may have a NaN close in the halted-stock case).
+        last_finite_row = next(
+            (r for r in reversed(rows) if _is_finite(r["close"])), rows[-1]
+        )
+        last_close_date = last_finite_row["trade_date"][:10]
 
         lines = [
             f"### {code}  (window {first_date} → {last_date})",
@@ -262,7 +269,7 @@ def format_grounding_block(grounding: dict[str, list[dict]]) -> str:
             lines.append(f"| {row['trade_date'][:10]} | {close_str} | {vol_str} |")
         lines.append("")
         lines.append(
-            f"**Latest close:** {last_close:.2f} ({last_date})  "
+            f"**Latest close:** {last_close:.2f} ({last_close_date})  "
             f"**Window range:** {window_low:.2f} – {window_high:.2f}"
         )
         sections.append("\n".join(lines))
