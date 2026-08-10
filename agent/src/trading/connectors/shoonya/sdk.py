@@ -607,7 +607,7 @@ def _to_int(value: Any, default: int = 0) -> int:
     if value is None or value == "":
         return default
     try:
-        return int(value)
+        return int(float(value))
     except (TypeError, ValueError):
         return default
 

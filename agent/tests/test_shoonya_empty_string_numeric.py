@@ -30,6 +30,7 @@ def test_to_int_handles_empty_string() -> None:
     assert sh._to_int("") == 0
     assert sh._to_int(None) == 0
     assert sh._to_int("100") == 100
+    assert sh._to_int("100.00") == 100
     assert sh._to_int(100) == 100
     assert sh._to_int("abc") == 0
 
