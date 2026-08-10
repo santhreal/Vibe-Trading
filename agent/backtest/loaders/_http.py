@@ -56,6 +56,13 @@ class HostThrottle:
     def __init__(self) -> None:
         self._last: dict[str, float] = {}
         self._lock = threading.Lock()
+        self._last_sweep: float = 0.0
+
+    def _sweep_stale_locked(self, cutoff: float) -> None:
+        """Drop buckets whose reserved fire time has passed. Caller holds the lock."""
+        stale = [k for k, t in self._last.items() if t < cutoff]
+        for k in stale:
+            del self._last[k]
 
     def wait(self, bucket: str, min_interval: float) -> None:
         """Block until ``bucket`` is allowed to fire again, then record the slot.
@@ -71,6 +78,13 @@ class HostThrottle:
             return
         with self._lock:
             now = time.monotonic()
+            # Periodic sweep: drop stale buckets so a process that queries
+            # many distinct hosts (e.g. a batch job hitting N tickers) does
+            # not accumulate dead entries without bound. Throttled to once
+            # per minute to avoid sweeping on every call.
+            if now - self._last_sweep >= 60.0:
+                self._sweep_stale_locked(now)
+                self._last_sweep = now
             last = self._last.get(bucket)
             if last is None or now >= last + min_interval:
                 # Slot is free right now — fire immediately, no jitter needed.
