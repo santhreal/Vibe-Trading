@@ -210,7 +210,7 @@ def calc_metrics(
     else:
         bpy = bars_per_year
 
-    port_ret = equity_curve.pct_change().fillna(0.0)
+    port_ret = equity_curve.pct_change().replace([np.inf, -np.inf], 0.0).fillna(0.0)
 
     total_ret = float(equity_curve.iloc[-1] / initial_cash - 1)
     ann_ret = float((1 + total_ret) ** (bpy / max(n, 1)) - 1)
