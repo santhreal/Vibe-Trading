@@ -54,13 +54,19 @@ class HostThrottle:
     """
 
     def __init__(self) -> None:
-        self._last: dict[str, float] = {}
+        self._last: dict[str, tuple[float, float]] = {}
         self._lock = threading.Lock()
         self._last_sweep: float = 0.0
 
     def _sweep_stale_locked(self, cutoff: float) -> None:
-        """Drop buckets whose reserved fire time has passed. Caller holds the lock."""
-        stale = [k for k, t in self._last.items() if t < cutoff]
+        """Drop buckets whose spacing window has fully elapsed. Caller holds the lock.
+
+        A bucket is only stale once ``fire_at + min_interval`` has passed —
+        before that, the next request to that bucket must still wait for its
+        spacing interval. Sweeping earlier would let the next request fire
+        immediately, defeating the rate limiter.
+        """
+        stale = [k for k, (t, interval) in self._last.items() if t + interval < cutoff]
         for k in stale:
             del self._last[k]
 
@@ -85,7 +91,8 @@ class HostThrottle:
             if now - self._last_sweep >= 60.0:
                 self._sweep_stale_locked(now)
                 self._last_sweep = now
-            last = self._last.get(bucket)
+            entry = self._last.get(bucket)
+            last = entry[0] if entry is not None else None
             if last is None or now >= last + min_interval:
                 # Slot is free right now — fire immediately, no jitter needed.
                 fire_at = now
@@ -93,7 +100,7 @@ class HostThrottle:
                 # Chain off the previous reservation and add jitter to desync
                 # concurrent callers, baking the jitter into the stored slot.
                 fire_at = last + min_interval + random.uniform(0.0, _JITTER_MAX_S)
-            self._last[bucket] = fire_at
+            self._last[bucket] = (fire_at, min_interval)
         sleep_for = fire_at - time.monotonic()
         if sleep_for > 0:
             time.sleep(sleep_for)
