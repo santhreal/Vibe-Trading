@@ -92,3 +92,18 @@ def test_no_defaultdict_side_effect_on_lookup() -> None:
     # Access the internal dict directly to simulate a lookup side effect.
     _ = limiter._hits.get("never-seen")
     assert "never-seen" not in limiter._hits
+
+
+
+def test_zero_limit_denies_all_requests() -> None:
+    """A limiter with max_requests=0 must deny every request without creating a bucket."""
+    limiter = _SlidingWindowRateLimiter(max_requests=0, window_seconds=60.0)
+    assert limiter.allow("1.2.3.4") is False
+    assert "1.2.3.4" not in limiter._hits
+
+
+def test_negative_limit_denies_all_requests() -> None:
+    """A limiter with a negative max must deny every request."""
+    limiter = _SlidingWindowRateLimiter(max_requests=-1, window_seconds=60.0)
+    assert limiter.allow("1.2.3.4") is False
+    assert "1.2.3.4" not in limiter._hits

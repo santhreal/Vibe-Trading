@@ -10,7 +10,7 @@ import os
 import signal
 import threading
 import time
-from collections import defaultdict, deque
+from collections import deque
 from datetime import datetime, timezone
 from typing import Deque, Dict, Optional, Tuple
 
@@ -92,6 +92,8 @@ class _SlidingWindowRateLimiter:
         now = time.monotonic()
         cutoff = now - self._window
         with self._lock:
+            if self._max <= 0:
+                return False
             # Periodic sweep: clean up expired buckets so keys that were
             # accessed once and never again do not accumulate without bound.
             # Throttled to once per window to avoid sweeping on every call.
