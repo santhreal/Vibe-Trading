@@ -540,6 +540,18 @@ def test_bootstrap_rejects_bad_arguments(kwargs, message):
 def test_bootstrap_rejects_an_empty_sample():
     with pytest.raises(ValueError, match="non-empty"):
         bootstrap_statistic(np.array([]), np.mean)
+def test_timeseries_constant_series_rejection():
+    # Constant series with std <= 1e-12 should raise ValueError on fitting functions
+    flat = pd.Series([1.0, 1.0, 1.0, 1.0, 1.0])
+    # We verify the ValueError is raised rather than silent singular matrix crashes
+    try:
+        from src.quantlib.timeseries import compute_half_life, fit_ornstein_uhlenbeck
+        with pytest.raises(ValueError, match="constant"):
+            compute_half_life(flat)
+        with pytest.raises(ValueError, match="constant"):
+            fit_ornstein_uhlenbeck(flat)
+    except ImportError:
+        pytest.skip("statsmodels optional dependency not installed")
 
 
 def test_bootstrap_sharpe_flags_a_real_edge_as_significant():

@@ -221,7 +221,7 @@ def compute_half_life(spread: pd.Series) -> float:
     frame = pd.concat({"delta": delta, "lag": lagged}, axis=1).dropna()
     if len(frame) < 3:
         raise ValueError(f"compute_half_life needs at least 3 lag/delta pairs, got {len(frame)}")
-    if frame["lag"].std(ddof=0) == 0:
+    if float(frame["lag"].std(ddof=0)) <= 1e-12:
         raise ValueError("compute_half_life needs a spread that varies; this one is constant")
 
     params = _ols_params(frame["delta"], sm.add_constant(frame[["lag"]]))
@@ -282,7 +282,7 @@ def fit_ornstein_uhlenbeck(series: pd.Series, dt: float = 1.0) -> dict:
     frame = pd.concat({"curr": s, "lag": lagged}, axis=1).dropna()
     if len(frame) < 3:
         raise ValueError(f"fit_ornstein_uhlenbeck needs at least 3 lag pairs, got {len(frame)}")
-    if frame["lag"].std(ddof=0) == 0:
+    if float(frame["lag"].std(ddof=0)) <= 1e-12:
         raise ValueError("fit_ornstein_uhlenbeck needs a series that varies; this one is constant")
 
     exog = sm.add_constant(frame[["lag"]])
