@@ -261,6 +261,8 @@ def purged_kfold_splits(
         train, purged, embargoed = _apply_purge_and_embargo(
             label_ends, test_mask, embargo_size
         )
+        if train.size == 0:
+            raise ValueError(f"Purge and embargo removed all training samples for fold {fold}")
         yield Split(
             train=train,
             test=np.arange(start, stop),
@@ -342,6 +344,8 @@ def group_purged_kfold_splits(
                 train_rows_list.append(group_to_rows[g])
 
         train_rows = np.concatenate(train_rows_list) if train_rows_list else np.array([], dtype=int)
+        if train_rows.size == 0:
+            raise ValueError(f"Purge and embargo removed all training samples for fold {fold}")
         train_rows.sort()
         test_rows.sort()
 
